@@ -1,6 +1,7 @@
 package com.zzh.riviere.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -40,22 +41,19 @@ fun RadioGroupWithIcon(options: List<Category>) {
     var selected by remember { mutableStateOf(options[0]) }
     LazyRow {
         items(options.size) { index ->
-
-            var tint = Color.Black
-            var iconBg = outcomeContainerLight
-            var buttonBg = MaterialTheme.colorScheme.surface
-            var fontColor = MaterialTheme.colorScheme.onSurface
-            if (options.get(index) == selected) {
-                tint = outcomeLight
-                iconBg = Color.White
-                buttonBg = outcomeLight
-                fontColor = onOutcomeLight
-            }
+            val item = options[index]
+            val tint = if (item == selected) outcomeLight else Color.Black
+            val iconBg = if (item == selected) Color.White else outcomeContainerLight
+            val buttonBg = if (item == selected) outcomeLight else MaterialTheme.colorScheme.surface
+            val fontColor = if (item == selected) onOutcomeLight else MaterialTheme.colorScheme.onSurface
 
             Surface(
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(50))
+                    .clickable {
+                        selected = options[index]
+                    }
             ) {
                 Row(
                     modifier = Modifier

@@ -4,7 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,31 +18,52 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zzh.riviere.data.BillItem
@@ -56,48 +81,30 @@ import com.zzh.riviere.ui.theme.outlineVariantLight
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        WindowCompat.setDecorFitsSystemWindows(window, false)
         enableEdgeToEdge()
         setContent {
             AppTheme {
                 // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surfaceContainer
-                ) {
-                    HomeScreen {
-
-                        AddBill()
-                        BillBox()
-                    }
-                }
+                MainScreen()
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen(content: @Composable () -> Unit) {
-    MaterialTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            content()
-        }
-    }
-}
+fun MainScreen() {
+    var offset by remember { mutableStateOf(300.dp) }
+    var alpha by remember { mutableStateOf(1f)}
+    val animatedOffset: Dp by animateDpAsState(offset)
+    val animatedAlpha: Float by animateFloatAsState(alpha)
 
-
-
-@Composable
-fun AddBill() {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(348.dp),
+            .wrapContentHeight(),
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
+
         Column {
             Spacer(
                 modifier = Modifier.height(
@@ -106,6 +113,57 @@ fun AddBill() {
                         .calculateTopPadding(),
                 )
             )
+            Surface (
+                color = MaterialTheme.colorScheme.surfaceContainer
+            ) {
+                AddBill(
+                    modifier = Modifier
+                        .alpha(animatedAlpha)
+                )
+                BillBox(
+                    modifier = Modifier
+                        .offset(y = animatedOffset)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onVerticalDrag = { change, dragAmount ->
+                                    val newOffset = offset + dragAmount.toDp()
+                                    val newAlpha = alpha + (dragAmount.toDp() / 300.dp)
+                                    offset = newOffset.coerceIn(0.dp, 300.dp)
+                                    alpha = newAlpha.coerceIn(0f, 1f)
+                                },
+                                onDragEnd = {
+                                    offset = if (offset < 150.dp) {
+                                        alpha = 0f
+                                        0.dp
+                                    } else {
+                                        alpha = 1f
+                                        300.dp
+                                    }
+                                }
+                            )
+                        }
+                )
+            }
+        }
+    }
+}
+
+fun String.isValidDecimal(): Boolean {
+    return this.toDoubleOrNull() != null && count { it == '.' } <= 1 && lastOrNull() != '.'
+}
+
+
+@Composable
+fun AddBill(modifier: Modifier) {
+    var inputAmount by remember { mutableStateOf("") }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(300.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 15.dp, start = 16.dp, end = 16.dp)
@@ -121,14 +179,38 @@ fun AddBill() {
                     Text(text = "一", style = TextStyle(fontSize = 24.sp, color = Color.White))
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "0",
-                    style = TextStyle(
+                BasicTextField(
+                    value = inputAmount,
+                    singleLine = true,
+                    onValueChange = { newValue ->
+//                        if ( newValue.isValidDecimal() ) {
+//                            inputAmount = newValue
+//                        }
+                        inputAmount = newValue
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(200.dp),
+                    textStyle = TextStyle(
                         fontSize = 57.sp,
                         fontWeight = FontWeight.W400,
-                        color = outlineVariantLight
-                    )
-
+                        textAlign = TextAlign.Right
+                    ),
+                    decorationBox = { innerTextField ->
+                        Box(modifier = Modifier.background(Color.Transparent), contentAlignment = Alignment.CenterEnd) {
+                            if (inputAmount.isEmpty()) {
+                                Text(
+                                    text = "0",
+                                    style = TextStyle(
+                                        fontSize = 57.sp,
+                                        fontWeight = FontWeight.W400,
+                                        color = outlineVariantLight,
+                                        textAlign = TextAlign.Right
+                                    )
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
                 Text(
                     text = "¥",
@@ -136,7 +218,7 @@ fun AddBill() {
                     modifier = Modifier.padding(start = 10.dp)
                 )
             }
-            Row (
+            Row(
                 modifier = Modifier.padding(top = 28.dp, start = 16.dp, end = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -146,14 +228,14 @@ fun AddBill() {
                 )
                 RadioGroupWithIcon(list)
                 Spacer(modifier = Modifier.weight(1f))
-                Box (
+                Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,
 
-                ) {
+                    ) {
                     Icon(
                         painter = painterResource(R.drawable.icon_arrow_down),
                         contentDescription = "arrow down",
@@ -162,14 +244,14 @@ fun AddBill() {
                     )
                 }
             }
-            Row (
+            Row(
                 modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 16.dp)
             ) {
                 Text("快速记录", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
                 Spacer(modifier = Modifier.weight(1f))
                 Text("+", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
             }
-            Row (
+            Row(
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)
             ) {
                 val cateSb = Category(1, "腥巴氪", R.drawable.icon_drink)
@@ -178,158 +260,153 @@ fun AddBill() {
                 val quickBreakfast = QuickAdd(1, cateBreakfast, 6.5f)
                 QuickAdd(listOf(quickSb, quickBreakfast))
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 
 @Composable
-fun BillBox() {
-    Box(
-        modifier = Modifier.fillMaxSize()
+fun BillBox(modifier: Modifier) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+        color = MaterialTheme.colorScheme.surface,
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(544.dp)
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .align(Alignment.BottomCenter),
-            color = MaterialTheme.colorScheme.surface,
+        Column(
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
+            Card(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .height(195.dp)
+                    .fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
-                Card(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .height(195.dp)
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Text(
-                        text = stringResource(R.string.expense),
-                        modifier = Modifier.padding(top = 12.dp, start = 16.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp, start = 16.dp, end = 16.dp)
-                    ) {
-                        Text(
-                            text = "¥",
-                            style = TextStyle(fontSize = 36.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "-123.",
-                            style = TextStyle(fontSize = 57.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Text(
-                            text = "45",
-                            style = TextStyle(fontSize = 44.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.income),
-                            style = TextStyle(fontSize = 12.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "+789.01" + "¥",
-                            style = TextStyle(fontSize = 14.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp, start = 16.dp, end = 16.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.budget),
-                            style = TextStyle(fontSize = 12.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "2000" + "¥",
-                            style = TextStyle(fontSize = 14.sp),
-                            modifier = Modifier.alignByBaseline()
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp, start = 16.dp, end = 16.dp)
-                    ) {
-                        LinearProgressIndicator(
-                            progress = { 0.3f },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
+                Text(
+                    text = stringResource(R.string.expense),
+                    modifier = Modifier.padding(top = 12.dp, start = 16.dp)
+                )
                 Row(
-                    modifier = Modifier.padding(bottom = 10.dp, start = 32.dp, end = 32.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 16.dp, end = 16.dp)
                 ) {
                     Text(
-                        text = "今日",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500)
+                        text = "¥",
+                        style = TextStyle(fontSize = 36.sp),
+                        modifier = Modifier.alignByBaseline()
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "+100" + "¥",
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.W500,
-                            color = incomeLight
-                        )
+                        text = "-123.",
+                        style = TextStyle(fontSize = 57.sp),
+                        modifier = Modifier.alignByBaseline()
                     )
-                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
-                        text = "-200" + "¥",
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.W500,
-                            color = outcomeLight
-                        )
+                        text = "45",
+                        style = TextStyle(fontSize = 44.sp),
+                        modifier = Modifier.alignByBaseline()
                     )
                 }
-
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                 ) {
-                    LazyColumn {
-                        items(20) {
-                            val drink = Category(1, "星巴克", R.drawable.icon_drink)
-                            val testItem = BillItem(1, drink, "15:40", -11.00f, "喝饮料")
-                            BillItem(testItem)
-                        }
-                        item {
-                            Spacer(
-                                modifier = Modifier.height(
-                                    WindowInsets
-                                        .systemBars.asPaddingValues()
-                                        .calculateBottomPadding(),
-                                )
+                    Text(
+                        text = stringResource(R.string.income),
+                        style = TextStyle(fontSize = 12.sp),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "+789.01" + "¥",
+                        style = TextStyle(fontSize = 14.sp),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.budget),
+                        style = TextStyle(fontSize = 12.sp),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "2000" + "¥",
+                        style = TextStyle(fontSize = 14.sp),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    LinearProgressIndicator(
+                        progress = { 0.3f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.padding(bottom = 10.dp, start = 32.dp, end = 32.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "今日",
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "+100" + "¥",
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.W500,
+                        color = incomeLight
+                    )
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = "-200" + "¥",
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.W500,
+                        color = outcomeLight
+                    )
+                )
+            }
+
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                LazyColumn {
+                    items(20) {
+                        val drink = Category(1, "星巴克", R.drawable.icon_drink)
+                        val testItem = BillItem(1, drink, "15:40", -11.00f, "喝饮料")
+                        BillItem(testItem)
+                    }
+                    item {
+                        Spacer(
+                            modifier = Modifier.height(
+                                WindowInsets
+                                    .systemBars.asPaddingValues()
+                                    .calculateBottomPadding(),
                             )
-                        }
+                        )
                     }
                 }
-
             }
+
         }
     }
 }
@@ -339,9 +416,9 @@ fun BillBox() {
 @Composable
 fun HomeScreenPreview() {
     AppTheme {
-        HomeScreen {
-            AddBill()
-            BillBox()
+        Column {
+            AddBill(modifier = Modifier)
+            BillBox(modifier = Modifier)
         }
     }
 }
