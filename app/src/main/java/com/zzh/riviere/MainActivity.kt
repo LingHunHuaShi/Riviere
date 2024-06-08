@@ -1,11 +1,9 @@
 package com.zzh.riviere
 
 import android.os.Bundle
-import android.widget.RadioGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +17,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -38,20 +34,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zzh.riviere.data.BillItem
 import com.zzh.riviere.data.Category
+import com.zzh.riviere.data.QuickAdd
+import com.zzh.riviere.ui.component.BillItem
+import com.zzh.riviere.ui.component.QuickAdd
+import com.zzh.riviere.ui.component.RadioGroupWithIcon
 import com.zzh.riviere.ui.theme.AppTheme
 import com.zzh.riviere.ui.theme.incomeLight
-import com.zzh.riviere.ui.theme.outcomeContainerLight
 import com.zzh.riviere.ui.theme.outcomeLight
 import com.zzh.riviere.ui.theme.outlineVariantLight
 
@@ -69,6 +66,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     HomeScreen {
+
                         AddBill()
                         BillBox()
                     }
@@ -90,63 +88,7 @@ fun HomeScreen(content: @Composable () -> Unit) {
     }
 }
 
-@Composable
-fun BillItem(item: BillItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(outcomeContainerLight)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.icon_drink),
-                contentDescription = "category icon",
-            )
-        }
-        Column {
-            Text(
-                item.title,
-                modifier = Modifier.padding(start = 12.dp),
-                style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.W500)
-            )
-            Text(
-                text = item.time + "  " + item.category.name,
-                modifier = Modifier.padding(start = 12.dp),
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.W400)
-            )
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        Row {
-            Text(
-                text = item.amount.toString(),
-                style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.W400),
-                modifier = Modifier.alignByBaseline()
-            )
-            Text(
-                text = "¥",
-                style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.W500),
-                modifier = Modifier
-                    .padding(start = 5.dp)
-                    .alignByBaseline()
-            )
-        }
-    }
-}
 
-@Preview
-@Composable
-fun BillItemPreview() {
-    AppTheme {
-        val drink = Category(1, "星巴克", R.drawable.icon_drink)
-        val testItem = BillItem(1, drink, "15:40", -11.00f, "喝饮料")
-        BillItem(testItem)
-    }
-}
 
 @Composable
 fun AddBill() {
@@ -186,6 +128,7 @@ fun AddBill() {
                         fontWeight = FontWeight.W400,
                         color = outlineVariantLight
                     )
+
                 )
                 Text(
                     text = "¥",
@@ -193,22 +136,49 @@ fun AddBill() {
                     modifier = Modifier.padding(start = 10.dp)
                 )
             }
-            Row {
-                LazyRow {
-                    item {
+            Row (
+                modifier = Modifier.padding(top = 28.dp, start = 16.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val list = listOf(
+                    Category(1, "早餐", R.drawable.icon_restaurant),
+                    Category(2, "饮料", R.drawable.icon_drink)
+                )
+                RadioGroupWithIcon(list)
+                Spacer(modifier = Modifier.weight(1f))
+                Box (
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
 
-                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_arrow_down),
+                        contentDescription = "arrow down",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
+            Row (
+                modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 16.dp)
+            ) {
+                Text("快速记录", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
+                Spacer(modifier = Modifier.weight(1f))
+                Text("+", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
+            }
+            Row (
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)
+            ) {
+                val cateSb = Category(1, "腥巴氪", R.drawable.icon_drink)
+                val cateBreakfast = Category(2, "早饭", R.drawable.icon_restaurant)
+                val quickSb = QuickAdd(1, cateSb, 45f)
+                val quickBreakfast = QuickAdd(1, cateBreakfast, 6.5f)
+                QuickAdd(listOf(quickSb, quickBreakfast))
+            }
         }
-    }
-}
-
-@Preview
-@Composable
-fun AddBillPreview() {
-    AppTheme {
-        AddBill()
     }
 }
 
@@ -346,7 +316,6 @@ fun BillBox() {
                             val drink = Category(1, "星巴克", R.drawable.icon_drink)
                             val testItem = BillItem(1, drink, "15:40", -11.00f, "喝饮料")
                             BillItem(testItem)
-
                         }
                         item {
                             Spacer(
