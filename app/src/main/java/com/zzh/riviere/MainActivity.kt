@@ -4,10 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,16 +32,11 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,8 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -148,14 +141,12 @@ fun MainScreen() {
     }
 }
 
-fun String.isValidDecimal(): Boolean {
-    return this.toDoubleOrNull() != null && count { it == '.' } <= 1 && lastOrNull() != '.'
-}
-
 
 @Composable
 fun AddBill(modifier: Modifier) {
     var inputAmount by remember { mutableStateOf("") }
+    var billMode by remember { mutableStateOf("add") }
+    val calcIcon = if (billMode == "add") painterResource(R.drawable.icon_add) else painterResource(R.drawable.icon_subtract)
 
     Surface(
         modifier = modifier
@@ -169,14 +160,29 @@ fun AddBill(modifier: Modifier) {
                 modifier = Modifier.padding(top = 15.dp, start = 16.dp, end = 16.dp)
             ) {
                 Box(
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.clickable {
+                        billMode = if (billMode == "add") "subtract" else "add"
+                    }
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.shape_star),
                         contentDescription = "icon background",
                         tint = outcomeLight
                     )
-                    Text(text = "一", style = TextStyle(fontSize = 24.sp, color = Color.White))
+//                    Icon(
+//                        painterResource(calcIcon),
+//                        contentDescription = "add/subtract icon",
+//                        tint = Color.White,
+//                    )
+                    Crossfade(targetState = calcIcon, label = "calc icon fade animation") { icon ->
+                        Icon(
+                            painter = icon,
+                            contentDescription = "calc mode icon",
+                            tint = Color.White,
+                        )
+                    }
+                    
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 BasicTextField(

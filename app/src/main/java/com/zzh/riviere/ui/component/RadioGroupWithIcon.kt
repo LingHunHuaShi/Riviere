@@ -1,5 +1,6 @@
 package com.zzh.riviere.ui.component
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -47,6 +48,11 @@ fun RadioGroupWithIcon(options: List<Category>) {
             val buttonBg = if (item == selected) outcomeLight else MaterialTheme.colorScheme.surface
             val fontColor = if (item == selected) onOutcomeLight else MaterialTheme.colorScheme.onSurface
 
+            val animateTint by animateColorAsState(tint, label = "tint animation")
+            val animateIconBg by animateColorAsState(iconBg, label = "icon bg animation")
+            val animateButtonBg by animateColorAsState(buttonBg, label = "button bg animation")
+            val animateFontColor by animateColorAsState(fontColor, label = "font color animation")
+
             Surface(
                 modifier = Modifier
                     .height(40.dp)
@@ -57,7 +63,7 @@ fun RadioGroupWithIcon(options: List<Category>) {
             ) {
                 Row(
                     modifier = Modifier
-                        .background(buttonBg)
+                        .background(animateButtonBg)
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -67,14 +73,14 @@ fun RadioGroupWithIcon(options: List<Category>) {
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(iconBg)
+                            .background(animateIconBg)
                             .padding(4.dp),
-                        tint = tint,
+                        tint = animateTint,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = options[index].name,
-                        style = TextStyle(color = fontColor, fontSize = 12.sp)
+                        style = TextStyle(color = animateFontColor, fontSize = 12.sp)
                     )
                 }
             }
