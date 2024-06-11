@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,17 +89,21 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     var offset by remember { mutableStateOf(300.dp) }
-    var alpha by remember { mutableStateOf(1f)}
-    val animatedOffset: Dp by animateDpAsState(offset)
-    val animatedAlpha: Float by animateFloatAsState(alpha)
-
+    var alpha by remember { mutableFloatStateOf(1f)}
+    val animatedOffset: Dp by animateDpAsState(offset, label = "offset animation")
+    val animatedAlpha: Float by animateFloatAsState(alpha, label = "alpha animation")
+    val quickAddOffset = if (animatedOffset >= 300.dp) {
+        animatedOffset - 150.dp
+    } else {
+        150.dp
+    }
+//    val quickAddOffset = 150.dp
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight(),
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-
         Column {
             Spacer(
                 modifier = Modifier.height(
@@ -113,24 +119,33 @@ fun MainScreen() {
                     modifier = Modifier
                         .alpha(animatedAlpha)
                 )
+                QuickAdd(quickAddOffset)
                 BillBox(
                     modifier = Modifier
                         .offset(y = animatedOffset)
                         .pointerInput(Unit) {
                             detectVerticalDragGestures(
-                                onVerticalDrag = { change, dragAmount ->
+                                onVerticalDrag = { _, dragAmount ->
                                     val newOffset = offset + dragAmount.toDp()
-                                    val newAlpha = alpha + (dragAmount.toDp() / 300.dp)
-                                    offset = newOffset.coerceIn(0.dp, 300.dp)
+                                    val newAlpha: Float =
+                                        if (newOffset >= 300.dp) {
+                                            1f
+                                        } else {
+                                            newOffset / 300.dp
+                                        }
+                                    offset = newOffset.coerceIn(0.dp, 600.dp)
                                     alpha = newAlpha.coerceIn(0f, 1f)
                                 },
                                 onDragEnd = {
                                     offset = if (offset < 150.dp) {
                                         alpha = 0f
                                         0.dp
-                                    } else {
+                                    } else if (150.dp < offset && offset < 450.dp) {
                                         alpha = 1f
                                         300.dp
+                                    } else {
+                                        alpha = 1f
+                                        600.dp
                                     }
                                 }
                             )
@@ -147,6 +162,7 @@ fun AddBill(modifier: Modifier) {
     var inputAmount by remember { mutableStateOf("") }
     var billMode by remember { mutableStateOf("add") }
     val calcIcon = if (billMode == "add") painterResource(R.drawable.icon_add) else painterResource(R.drawable.icon_subtract)
+    val interactionSource = remember { MutableInteractionSource() }
 
     Surface(
         modifier = modifier
@@ -161,7 +177,10 @@ fun AddBill(modifier: Modifier) {
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable (
+                        indication = null,
+                        interactionSource = interactionSource,
+                    ) {
                         billMode = if (billMode == "add") "subtract" else "add"
                     }
                 ) {
@@ -170,11 +189,7 @@ fun AddBill(modifier: Modifier) {
                         contentDescription = "icon background",
                         tint = outcomeLight
                     )
-//                    Icon(
-//                        painterResource(calcIcon),
-//                        contentDescription = "add/subtract icon",
-//                        tint = Color.White,
-//                    )
+
                     Crossfade(targetState = calcIcon, label = "calc icon fade animation") { icon ->
                         Icon(
                             painter = icon,
@@ -189,9 +204,6 @@ fun AddBill(modifier: Modifier) {
                     value = inputAmount,
                     singleLine = true,
                     onValueChange = { newValue ->
-//                        if ( newValue.isValidDecimal() ) {
-//                            inputAmount = newValue
-//                        }
                         inputAmount = newValue
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
@@ -249,22 +261,6 @@ fun AddBill(modifier: Modifier) {
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
-            }
-            Row(
-                modifier = Modifier.padding(start = 16.dp, top = 30.dp, end = 16.dp)
-            ) {
-                Text("快速记录", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
-                Spacer(modifier = Modifier.weight(1f))
-                Text("+", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
-            }
-            Row(
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)
-            ) {
-                val cateSb = Category(1, "腥巴氪", R.drawable.icon_drink)
-                val cateBreakfast = Category(2, "早饭", R.drawable.icon_restaurant)
-                val quickSb = QuickAdd(1, cateSb, 45f)
-                val quickBreakfast = QuickAdd(1, cateBreakfast, 6.5f)
-                QuickAdd(listOf(quickSb, quickBreakfast))
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -413,6 +409,32 @@ fun BillBox(modifier: Modifier) {
                 }
             }
 
+        }
+    }
+}
+
+@Composable
+fun QuickAdd(quickAddOffset: Dp) {
+    Column (
+        modifier = Modifier.offset(y = quickAddOffset)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(start = 16.dp, top = 30.dp, end = 16.dp)
+        ) {
+            Text("快速记录", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
+            Spacer(modifier = Modifier.weight(1f))
+            Text("+", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.W500))
+        }
+        Row(
+            modifier = Modifier
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp)
+        ) {
+            val cateSb = Category(1, "腥巴氪", R.drawable.icon_drink)
+            val cateBreakfast = Category(2, "早饭", R.drawable.icon_restaurant)
+            val quickSb = QuickAdd(1, cateSb, 45f)
+            val quickBreakfast = QuickAdd(1, cateBreakfast, 6.5f)
+            QuickAdd(listOf(quickSb, quickBreakfast))
         }
     }
 }
